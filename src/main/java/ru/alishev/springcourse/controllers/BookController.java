@@ -5,10 +5,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import ru.alishev.springcourse.dao.BookDao;
-import ru.alishev.springcourse.dao.PersonDAO;
 import ru.alishev.springcourse.models.Book;
 import ru.alishev.springcourse.models.Person;
+import ru.alishev.springcourse.services.BookService;
+import ru.alishev.springcourse.services.PeopleService;
 
 import javax.validation.Valid;
 
@@ -19,32 +19,30 @@ import javax.validation.Valid;
 @RequestMapping("/book")
 public class BookController {
 
-    private final BookDao bookDao;
-    private final PersonDAO personDAO;
+    private final BookService bookService;
+    private final PeopleService peopleService;
 
     @Autowired
-    public BookController(BookDao bookDao, PersonDAO personDAO) {
-        this.bookDao = bookDao;
-        this.personDAO = personDAO;
+    public BookController(BookService bookService, PeopleService peopleService) {
+        this.bookService = bookService;
+        this.peopleService = peopleService;
     }
 
     @GetMapping()
     public String index(Model model) {
-        model.addAttribute("books", bookDao.index());
+        model.addAttribute("books", bookService.findAll());
         return "book/index";
     }
 
     @GetMapping("/{id}")
-    public String show(@PathVariable("id") int id, Model model) {
-        model.addAttribute("book", bookDao.show(id));
-        Integer personId = bookDao.show(id).getPersonId();
-        if (personId == null) {
-            model.addAttribute("person", new Person());
+    public String show(@PathVariable("id") int id, Model model, @ModelAttribute("person") Person person) {
+        model.addAttribute("book", bookService.findOne(id));
+        Book book = bookService.findOne(id);
+        if (book.getPerson() != null) {
+            model.addAttribute("person", book.getPerson());
         } else {
-            model.addAttribute("person", personDAO.show(personId));
+            model.addAttribute("people", peopleService.findAll());
         }
-
-        model.addAttribute("people", personDAO.index());
         return "book/show";
     }
 
@@ -59,13 +57,13 @@ public class BookController {
         if (bindingResult.hasErrors())
             return "book/new";
 
-        bookDao.save(book);
+        bookService.save(book);
         return "redirect:/book";
     }
 
     @GetMapping("/{id}/edit")
     public String edit(Model model, @PathVariable("id") int id) {
-        model.addAttribute("book", bookDao.show(id));
+        model.addAttribute("book", bookService.findOne(id));
         return "book/edit";
     }
 
@@ -75,25 +73,28 @@ public class BookController {
         if (bindingResult.hasErrors())
             return "book/edit";
 
-        bookDao.update(id, book);
+        bookService.update(book);
         return "redirect:/book";
     }
 
     @DeleteMapping("/{id}")
     public String delete(@PathVariable("id") int id) {
-        bookDao.delete(id);
+        bookService.delete(id);
         return "redirect:/book";
     }
 
     @PatchMapping("/{id}/vacant")
     public String vacant(@ModelAttribute("book") Book book, @PathVariable("id") int id){
-        bookDao.vacant(id);
+        book.setPerson(null);
+        bookService.update(book);
         return "redirect:../../book/{id}";
     }
 
     @PatchMapping("/{id}/occupy")
     public String occupy(@ModelAttribute("person") Person person, @PathVariable("id") int bookId) {
-        bookDao.occupy(bookId, person.getId());
+        Book book = bookService.findOne(bookId);
+        book.setPerson(person);
+        bookService.update(book);
         return "redirect:../../book/{id}";
     }
 }

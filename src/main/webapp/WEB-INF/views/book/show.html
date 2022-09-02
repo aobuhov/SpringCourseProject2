@@ -27,7 +27,7 @@
     </form>
 
 </div>
-<div th:unless="${book.getPersonId()}">
+<div th:unless="${people}">
     <p>Эта книга свободна. Кому назначить её?</p>
     <br>
     <form th:method="PATCH" th:action="@{/book/{id}/occupy(id=${book.getId()})}" th:object="${book}">
